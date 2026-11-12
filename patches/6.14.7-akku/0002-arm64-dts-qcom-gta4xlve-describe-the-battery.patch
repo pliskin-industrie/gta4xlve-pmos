@@ -1,0 +1,41 @@
+From 72bd265b9643e9c86977e68e4977091810e344c9 Mon Sep 17 00:00:00 2001
+From: Pliskin Industrie <pliskin-industrie@users.noreply.github.com>
+Date: Sun, 8 Nov 2026 12:32:46 +0100
+Subject: [PATCH 2/3] arm64: dts: qcom: gta4xlve: describe the battery
+
+Add a simple-battery node for the 7040 mAh / 3.86 V cell and link it to
+the SM5714 fuel gauge, so that userspace (upower) gets design capacity
+and can estimate remaining time.
+
+Signed-off-by: Pliskin Industrie <pliskin-industrie@users.noreply.github.com>
+---
+ .../boot/dts/qcom/sm7125-samsung-gta4xlve.dts    | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/sm7125-samsung-gta4xlve.dts b/arch/arm64/boot/dts/qcom/sm7125-samsung-gta4xlve.dts
+index 2cc5f4de39..66c9c832ca 100644
+--- a/arch/arm64/boot/dts/qcom/sm7125-samsung-gta4xlve.dts
++++ b/arch/arm64/boot/dts/qcom/sm7125-samsung-gta4xlve.dts
+@@ -310,3 +310,19 @@ &usb_1_hsphy {
+ 	qcom,imp-res-offset-value = <0x08>;
+ 	qcom,bias-ctrl-value = <0x16>;
+ };
++
++/ {
++	battery: battery {
++		compatible = "simple-battery";
++		charge-full-design-microamp-hours = <7040000>;
++		energy-full-design-microwatt-hours = <27170000>;
++		voltage-min-design-microvolt = <3400000>;
++		voltage-max-design-microvolt = <4400000>;
++	};
++};
++
++&i2c4 {
++	sm5714-fg@71 {
++		monitored-battery = <&battery>;
++	};
++};
+-- 
+2.53.0
+

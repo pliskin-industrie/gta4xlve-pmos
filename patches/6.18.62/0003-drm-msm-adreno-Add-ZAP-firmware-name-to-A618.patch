@@ -1,0 +1,26 @@
+From c9f5dddb4031eca29789e623b3b3badc2d7e6a0c Mon Sep 17 00:00:00 2001
+From: N1kroks <nikroksm@mail.ru>
+Date: Wed, 12 Jun 2024 11:29:35 +0500
+Subject: [PATCH 03/25] drm/msm/adreno: Add ZAP firmware name to A618
+
+Signed-off-by: Vitalii Skorkin <nikroksm@mail.ru>
+(cherry picked from commit 51ef121a31c2362dffcf9b7a6dfa7c3b3d42d0a0)
+---
+ drivers/gpu/drm/msm/adreno/a6xx_catalog.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpu/drm/msm/adreno/a6xx_catalog.c b/drivers/gpu/drm/msm/adreno/a6xx_catalog.c
+index f838a410d5..6b83cdbe35 100644
+--- a/drivers/gpu/drm/msm/adreno/a6xx_catalog.c
++++ b/drivers/gpu/drm/msm/adreno/a6xx_catalog.c
+@@ -773,6 +773,7 @@ static const struct adreno_info a6xx_gpus[] = {
+ 		.quirks = ADRENO_QUIRK_HAS_CACHED_COHERENT |
+ 			  ADRENO_QUIRK_4GB_VA,
+ 		.init = a6xx_gpu_init,
++		.zapfw = "a615_zap.mbn",
+ 		.a6xx = &(const struct a6xx_info) {
+ 			.protect = &a630_protect,
+ 			.gmu_cgc_mode = 0x00000222,
+-- 
+2.53.0
+

@@ -1,0 +1,26 @@
+From 80abb636345d2f4de4b51d610f0c06d840c54a7b Mon Sep 17 00:00:00 2001
+From: N1kroks <nikroksm@mail.ru>
+Date: Wed, 12 Jun 2024 11:18:01 +0500
+Subject: [PATCH 01/25] drm/msm/adreno: Add A618 speedbin 0x9f
+
+Signed-off-by: Vitalii Skorkin <nikroksm@mail.ru>
+(cherry picked from commit 95df9265473e1558396532fec038024fc1170250)
+---
+ drivers/gpu/drm/msm/adreno/a6xx_catalog.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpu/drm/msm/adreno/a6xx_catalog.c b/drivers/gpu/drm/msm/adreno/a6xx_catalog.c
+index bbfee7fef6..f838a410d5 100644
+--- a/drivers/gpu/drm/msm/adreno/a6xx_catalog.c
++++ b/drivers/gpu/drm/msm/adreno/a6xx_catalog.c
+@@ -782,6 +782,7 @@ static const struct adreno_info a6xx_gpus[] = {
+ 			{ 0,   0 },
+ 			{ 169, 1 },
+ 			{ 174, 2 },
++			{ 159, 3 },
+ 		),
+ 	}, {
+ 		.machine = "qcom,sm4350",
+-- 
+2.53.0
+

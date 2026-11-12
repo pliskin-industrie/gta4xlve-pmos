@@ -1,0 +1,26 @@
+From 72c72f7ee06ee70d77036a275058015bc6d12d73 Mon Sep 17 00:00:00 2001
+From: Vitalii Skorkin <nikroksm@mail.ru>
+Date: Mon, 2 Dec 2024 19:54:45 +0500
+Subject: [PATCH 11/25] soc: qcom: pd-mapper: Add SM7125 support
+
+Signed-off-by: Vitalii Skorkin <nikroks@mainlining.org>
+(cherry picked from commit 3e4fd51935b0f7ed9463633d64764e64a83e6996)
+---
+ drivers/soc/qcom/qcom_pd_mapper.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/soc/qcom/qcom_pd_mapper.c b/drivers/soc/qcom/qcom_pd_mapper.c
+index f590c829be..f506080f6f 100644
+--- a/drivers/soc/qcom/qcom_pd_mapper.c
++++ b/drivers/soc/qcom/qcom_pd_mapper.c
+@@ -577,6 +577,7 @@ static const struct of_device_id qcom_pdm_domains[] __maybe_unused = {
+ 	{ .compatible = "qcom,sm6115", .data = sm6115_domains, },
+ 	{ .compatible = "qcom,sm6350", .data = sm6350_domains, },
+ 	{ .compatible = "qcom,sm7150", .data = sm7150_domains, },
++	{ .compatible = "qcom,sm7125", .data = sc7180_domains, },
+ 	{ .compatible = "qcom,sm7225", .data = sm6350_domains, },
+ 	{ .compatible = "qcom,sm7325", .data = sc7280_domains, },
+ 	{ .compatible = "qcom,sm8150", .data = sm8150_domains, },
+-- 
+2.53.0
+

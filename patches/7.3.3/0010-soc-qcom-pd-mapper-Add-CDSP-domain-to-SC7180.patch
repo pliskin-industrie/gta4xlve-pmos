@@ -1,0 +1,26 @@
+From 14d0e6688a56c194e64ce0e3db08124c82b4bcef Mon Sep 17 00:00:00 2001
+From: Vitalii Skorkin <nikroksm@mail.ru>
+Date: Sat, 22 Feb 2025 22:20:39 +0500
+Subject: [PATCH 10/25] soc: qcom: pd-mapper: Add CDSP domain to SC7180
+
+Signed-off-by: Vitalii Skorkin <nikroksm@mail.ru>
+(cherry picked from commit 24d60ddb06107beff24a90b8d410f293d30404c1)
+---
+ drivers/soc/qcom/qcom_pd_mapper.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/soc/qcom/qcom_pd_mapper.c b/drivers/soc/qcom/qcom_pd_mapper.c
+index 64ca99d7fa..c6369198ca 100644
+--- a/drivers/soc/qcom/qcom_pd_mapper.c
++++ b/drivers/soc/qcom/qcom_pd_mapper.c
+@@ -465,6 +465,7 @@ static const struct qcom_pdm_domain_data *sc7180_domains[] = {
+ 	&adsp_audio_pd,
+ 	&adsp_root_pd_pdr,
+ 	&adsp_sensor_pd,
++	&cdsp_root_pd,
+ 	&mpss_root_pd_gps_pdr,
+ 	&mpss_wlan_pd,
+ 	NULL,
+-- 
+2.53.0
+

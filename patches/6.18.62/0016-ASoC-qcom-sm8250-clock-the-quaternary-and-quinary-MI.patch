@@ -1,0 +1,49 @@
+From 2583b366ae8c51a7c79ba629d3ba5b15f8c5abe4 Mon Sep 17 00:00:00 2001
+From: Viktor Zaritskyi <viktorzarickiy@gmail.com>
+Date: Mon, 7 Sep 2026 10:13:27 +0300
+Subject: [PATCH 16/25] ASoC: qcom: sm8250: clock the quaternary and quinary
+ MI2S links
+
+The startup callback sets up a bit clock and DAI format for the primary,
+secondary and tertiary MI2S links only. A board wired to one of the other
+two -- the Galaxy Tab S6 Lite drives its speaker amplifiers over quinary
+MI2S -- gets a port with no bit clock at all: the DSP plays happily, the PCM
+reports RUNNING and the codec's DAPM widgets all come up, so nothing looks
+wrong, but no data ever reaches the codec and the speakers stay silent.
+
+Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+(cherry picked from commit a381ae8bf9558d9bfc023a8d568cf82ec5d5ef15)
+---
+ sound/soc/qcom/sm8250.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/sound/soc/qcom/sm8250.c b/sound/soc/qcom/sm8250.c
+index ce5b005920..fd99760133 100644
+--- a/sound/soc/qcom/sm8250.c
++++ b/sound/soc/qcom/sm8250.c
+@@ -105,6 +105,22 @@ static int sm8250_snd_startup(struct snd_pcm_substream *substream)
+ 		snd_soc_dai_set_fmt(cpu_dai, fmt);
+ 		snd_soc_dai_set_fmt(codec_dai, codec_dai_fmt);
+ 		break;
++	case QUATERNARY_MI2S_RX:
++		codec_dai_fmt |= SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_I2S;
++		snd_soc_dai_set_sysclk(cpu_dai,
++			Q6AFE_LPASS_CLK_ID_QUAD_MI2S_IBIT,
++			MI2S_BCLK_RATE, SNDRV_PCM_STREAM_PLAYBACK);
++		snd_soc_dai_set_fmt(cpu_dai, fmt);
++		snd_soc_dai_set_fmt(codec_dai, codec_dai_fmt);
++		break;
++	case QUINARY_MI2S_RX:
++		codec_dai_fmt |= SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_I2S;
++		snd_soc_dai_set_sysclk(cpu_dai,
++			Q6AFE_LPASS_CLK_ID_QUI_MI2S_IBIT,
++			MI2S_BCLK_RATE, SNDRV_PCM_STREAM_PLAYBACK);
++		snd_soc_dai_set_fmt(cpu_dai, fmt);
++		snd_soc_dai_set_fmt(codec_dai, codec_dai_fmt);
++		break;
+ 	default:
+ 		break;
+ 	}
+-- 
+2.53.0
+

@@ -1,0 +1,474 @@
+From e6d93c719906bdb6369ca91e0e26e5499c9db0a6 Mon Sep 17 00:00:00 2001
+From: Pliskin Industrie <pliskin-industrie@users.noreply.github.com>
+Date: Sun, 8 Nov 2026 12:32:46 +0100
+Subject: [PATCH 25/25] power: supply: sm5714-fg: fix units and report capacity
+
+The driver masked the SRAM values to 11 bits and interpreted them as
+8.8 fixed point, so voltage_now reported ~0.5 V and current_now was in
+mA without sign. Use the scaling of the vendor driver instead:
+
+  VBAT     2700 mV +/- raw * 10 / 109 mV (sign/magnitude)
+  OCV      raw / 2048 V
+  CURRENT  raw / 2044 A, sign/magnitude, x2.5 in high range
+  TEMP     raw * 10 * 2989 >> 19 (0.1 degC)
+
+Report values in uV/uA as required by the power_supply ABI (current
+positive while charging), serialise the SRAM address/data access, and
+add voltage_avg/ocv, current_avg, charge_full(_design), charge_now,
+energy_* and design voltages from the monitored-battery node (falling
+back to 7040 mAh).
+
+Scaling taken from the Samsung SM7125 vendor kernel
+(drivers/battery/fuelgauge/sm5714_fuelgauge.c, GPL-2.0).
+
+Signed-off-by: Pliskin Industrie <pliskin-industrie@users.noreply.github.com>
+(cherry picked from commit 52d9995d6c65d63ce90f4b70c5a4453fd8ab03b0)
+---
+ drivers/power/supply/sm5714-fg.c | 346 ++++++++++++++++++++++---------
+ 1 file changed, 252 insertions(+), 94 deletions(-)
+
+diff --git a/drivers/power/supply/sm5714-fg.c b/drivers/power/supply/sm5714-fg.c
+index 3c20711097..b938790733 100644
+--- a/drivers/power/supply/sm5714-fg.c
++++ b/drivers/power/supply/sm5714-fg.c
+@@ -1,136 +1,263 @@
+ // SPDX-License-Identifier: GPL-2.0-only
+ /*
++ * Silicon Mitus SM5714 fuel gauge
++ *
+  * Copyright (c) 2024, map220v <map220v300@gmail.com>
++ *
++ * Register scaling follows the Samsung downstream sm5714_fuelgauge driver
++ * (GPL-2.0, Samsung SM7125 kernel sources).
+  */
+ 
+-#include <linux/delay.h>
+-#include <linux/gpio/consumer.h>
+ #include <linux/i2c.h>
+ #include <linux/kernel.h>
+ #include <linux/module.h>
+-#include <linux/property.h>
+-#include <linux/regulator/driver.h>
+-#include <linux/regulator/of_regulator.h>
+-#include <linux/of_gpio.h>
++#include <linux/mutex.h>
++#include <linux/of.h>
+ #include <linux/power_supply.h>
+-#include <linux/regmap.h>
+-
+-#define SM5714_FG_REG_DEVICE_ID           0x00
+-#define SM5714_FG_REG_CTRL				  0x01
+-#define SM5714_FG_REG_INTFG               0x02
+-#define SM5714_FG_REG_STATUS              0x03
+-#define SM5714_FG_REG_INTFG_MASK          0x04
+-
+-#define SM5714_FG_REG_SRAM_PROT		      0x8B
+-#define SM5714_FG_REG_SRAM_RADDR		  0x8C
+-#define SM5714_FG_REG_SRAM_RDATA		  0x8D
+-#define SM5714_FG_REG_SRAM_WADDR		  0x8E
+-#define SM5714_FG_REG_SRAM_WDATA		  0x8F
+-
+-#define SM5714_FG_ADDR_SRAM_SOC			  0x00
+-#define SM5714_FG_ADDR_SRAM_OCV			  0x01
+-#define SM5714_FG_ADDR_SRAM_VBAT		  0x03
+-#define SM5714_FG_ADDR_SRAM_VSYS		  0x04
+-#define SM5714_FG_ADDR_SRAM_CURRENT		  0x05
+-#define SM5714_FG_ADDR_SRAM_TEMPERATURE	  0x07
+-#define SM5714_FG_ADDR_SRAM_VBAT_AVG	  0x08
+-#define SM5714_FG_ADDR_SRAM_CURRENT_AVG	  0x09
+-#define SM5714_FG_ADDR_SRAM_STATE         0x15
+-
+-#define FIXED_POINT_8_8_EXTEND_TO_INT(fp_value, extend_orders) ((((fp_value & 0xff00) >> 8) * extend_orders) + (((fp_value & 0xff) * extend_orders) / 256))
++
++#define SM5714_FG_REG_SYSTEM_STATUS	0x10
++#define SM5714_FG_REG_AUX_STAT		0x22
++#define SM5714_FG_REG_SRAM_RADDR	0x8C
++#define SM5714_FG_REG_SRAM_RDATA	0x8D
++
++#define SM5714_FG_ADDR_SRAM_SOC		0x00
++#define SM5714_FG_ADDR_SRAM_OCV		0x01
++#define SM5714_FG_ADDR_SRAM_VBAT	0x03
++#define SM5714_FG_ADDR_SRAM_CURRENT	0x05
++#define SM5714_FG_ADDR_SRAM_TEMPERATURE	0x07
++#define SM5714_FG_ADDR_SRAM_VBAT_AVG	0x08
++#define SM5714_FG_ADDR_SRAM_CURRENT_AVG	0x09
++
++#define SM5714_FG_SIGN			BIT(15)
++#define SM5714_FG_STATUS_JIG		BIT(15)	/* SYSTEM_STATUS: nENQ4 high */
++#define SM5714_FG_AUX_CURR_X2_5		BIT(10)	/* AUX_STAT: current range x2.5 */
++
++/* Galaxy Tab S6 Lite: 7040 mAh, 3.86 V nominal */
++#define SM5714_FG_DEFAULT_CHARGE_FULL_UAH	7040000
+ 
+ struct sm5714_fg {
+ 	struct power_supply *psy;
+ 	struct i2c_client *i2c;
++	struct mutex lock;		/* SRAM address/data register pair */
++	int charge_full_design_uah;
++	int energy_full_design_uwh;
++	int voltage_min_design_uv;
++	int voltage_max_design_uv;
+ };
+ 
+ static enum power_supply_property sm5714_fg_props[] = {
+ 	POWER_SUPPLY_PROP_STATUS,
++	POWER_SUPPLY_PROP_PRESENT,
++	POWER_SUPPLY_PROP_TECHNOLOGY,
+ 	POWER_SUPPLY_PROP_TEMP,
+ 	POWER_SUPPLY_PROP_CAPACITY,
+ 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
++	POWER_SUPPLY_PROP_VOLTAGE_AVG,
++	POWER_SUPPLY_PROP_VOLTAGE_OCV,
+ 	POWER_SUPPLY_PROP_CURRENT_NOW,
++	POWER_SUPPLY_PROP_CURRENT_AVG,
++	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
++	POWER_SUPPLY_PROP_CHARGE_FULL,
++	POWER_SUPPLY_PROP_CHARGE_NOW,
++	POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN,
++	POWER_SUPPLY_PROP_ENERGY_FULL,
++	POWER_SUPPLY_PROP_ENERGY_NOW,
++	POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN,
++	POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,
+ };
+ 
++static int sm5714_fg_read_sram(struct sm5714_fg *drv, u8 addr)
++{
++	int ret;
++
++	mutex_lock(&drv->lock);
++	ret = i2c_smbus_write_word_data(drv->i2c, SM5714_FG_REG_SRAM_RADDR, addr);
++	if (!ret)
++		ret = i2c_smbus_read_word_data(drv->i2c, SM5714_FG_REG_SRAM_RDATA);
++	mutex_unlock(&drv->lock);
++
++	return ret;
++}
++
++/* Battery voltage in uV: 2700 mV +/- raw * 10 / 109 mV */
++static int sm5714_fg_vbat(struct sm5714_fg *drv, u8 addr, int *uv)
++{
++	int raw = sm5714_fg_read_sram(drv, addr);
++	int mv;
++
++	if (raw < 0)
++		return raw;
++
++	if (raw & SM5714_FG_SIGN)
++		mv = 2700 - ((raw & 0x7fff) * 10) / 109;
++	else
++		mv = 2700 + (raw * 10) / 109;
++
++	*uv = mv * 1000;
++	return 0;
++}
++
++/* OCV in uV: unsigned 5.11 fixed point volts */
++static int sm5714_fg_ocv(struct sm5714_fg *drv, int *uv)
++{
++	int raw = sm5714_fg_read_sram(drv, SM5714_FG_ADDR_SRAM_OCV);
++
++	if (raw < 0)
++		return raw;
++
++	*uv = (int)(((u64)raw * 1000000) >> 11);
++	return 0;
++}
++
++/*
++ * Current in uA: sign + magnitude, 1 A = 2044 LSB, x2.5 in high range.
++ * Positive while charging, negative while discharging (power_supply ABI).
++ */
++static int sm5714_fg_current(struct sm5714_fg *drv, u8 addr, int *ua)
++{
++	int raw, aux, sys;
++	s64 val;
++
++	raw = sm5714_fg_read_sram(drv, addr);
++	if (raw < 0)
++		return raw;
++
++	aux = i2c_smbus_read_word_data(drv->i2c, SM5714_FG_REG_AUX_STAT);
++	if (aux < 0)
++		return aux;
++
++	sys = i2c_smbus_read_word_data(drv->i2c, SM5714_FG_REG_SYSTEM_STATUS);
++	if (sys < 0)
++		return sys;
++
++	val = div_s64((s64)(raw & 0x7fff) * 1000000, 2044);
++	if (aux & SM5714_FG_AUX_CURR_X2_5)
++		val = div_s64(val * 25, 10);
++	if (raw & SM5714_FG_SIGN)
++		val = -val;
++	/* Factory jig attached: current measurement is not valid */
++	if (sys & SM5714_FG_STATUS_JIG)
++		val = 0;
++
++	*ua = (int)val;
++	return 0;
++}
++
++/* State of charge in 0.1 %: unsigned 8.8 fixed point percent */
++static int sm5714_fg_soc_permille(struct sm5714_fg *drv, int *permille)
++{
++	int raw = sm5714_fg_read_sram(drv, SM5714_FG_ADDR_SRAM_SOC);
++
++	if (raw < 0)
++		return raw;
++
++	*permille = clamp((raw * 10) >> 8, 0, 1000);
++	return 0;
++}
++
+ static int sm5714_fg_get_status(int *status)
+ {
+ 	union power_supply_propval val;
+ 	struct power_supply *psy;
+-	int ret = -EINVAL;
++	int ret;
+ 
+ 	psy = power_supply_get_by_name("sm5714_charger");
+ 	if (!psy)
+-		return ret;
++		return -ENODEV;
+ 
+-	ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_STATUS,
+-					&val);
++	ret = power_supply_get_property(psy, POWER_SUPPLY_PROP_STATUS, &val);
+ 	power_supply_put(psy);
+ 	if (ret)
+ 		return ret;
+ 
+ 	*status = val.intval;
+-
+-	return ret;
++	return 0;
+ }
+ 
+ static int sm5714_fg_get_property(struct power_supply *psy,
+-				   enum power_supply_property psp,
+-				   union power_supply_propval *val)
++				  enum power_supply_property psp,
++				  union power_supply_propval *val)
+ {
+-	int error;
+-	unsigned int value;
+-	struct sm5714_fg *drv;
++	struct sm5714_fg *drv = power_supply_get_drvdata(psy);
++	int ret = 0, raw, tmp;
+ 
+-	drv = power_supply_get_drvdata(psy);
+ 	switch (psp) {
+ 	case POWER_SUPPLY_PROP_STATUS:
+-		error = sm5714_fg_get_status(&value);
+-		val->intval = value;
++		ret = sm5714_fg_get_status(&tmp);
++		if (ret) {
++			/* Charger not (yet) registered: derive from current */
++			ret = sm5714_fg_current(drv, SM5714_FG_ADDR_SRAM_CURRENT_AVG, &tmp);
++			if (ret)
++				return ret;
++			tmp = tmp > 0 ? POWER_SUPPLY_STATUS_CHARGING :
++					POWER_SUPPLY_STATUS_DISCHARGING;
++		}
++		if (tmp == POWER_SUPPLY_STATUS_CHARGING &&
++		    !sm5714_fg_soc_permille(drv, &raw) && raw >= 1000)
++			tmp = POWER_SUPPLY_STATUS_FULL;
++		val->intval = tmp;
++		break;
++	case POWER_SUPPLY_PROP_PRESENT:
++		val->intval = 1;
++		break;
++	case POWER_SUPPLY_PROP_TECHNOLOGY:
++		val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
+ 		break;
+ 	case POWER_SUPPLY_PROP_TEMP:
+-		i2c_smbus_write_word_data(drv->i2c, SM5714_FG_REG_SRAM_RADDR, SM5714_FG_ADDR_SRAM_TEMPERATURE);
+-		value = i2c_smbus_read_word_data(drv->i2c, SM5714_FG_REG_SRAM_RDATA);
+-		if (value < 0)
+-			return value;
+-		// Convert to decicelcius
+-		value &= 0x7fff;
+-		value = FIXED_POINT_8_8_EXTEND_TO_INT((unsigned short)value, 10);
+-		val->intval = value;
++		raw = sm5714_fg_read_sram(drv, SM5714_FG_ADDR_SRAM_TEMPERATURE);
++		if (raw < 0)
++			return raw;
++		/* 0.1 degC, scaling as in the downstream driver */
++		tmp = (((raw & 0x7fff) * 10) * 2989) >> 19;
++		val->intval = (raw & SM5714_FG_SIGN) ? -tmp : tmp;
+ 		break;
+ 	case POWER_SUPPLY_PROP_CAPACITY:
+-		i2c_smbus_write_word_data(drv->i2c, SM5714_FG_REG_SRAM_RADDR, SM5714_FG_ADDR_SRAM_SOC);
+-		value = i2c_smbus_read_word_data(drv->i2c, SM5714_FG_REG_SRAM_RDATA);
+-		if (value < 0)
+-			return value;
+-		// Convert to %
+-		value = FIXED_POINT_8_8_EXTEND_TO_INT((unsigned short)value, 10);
+-		value /= 10;
+-		val->intval = value;
++		ret = sm5714_fg_soc_permille(drv, &tmp);
++		val->intval = DIV_ROUND_CLOSEST(tmp, 10);
+ 		break;
+ 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
+-		i2c_smbus_write_word_data(drv->i2c, SM5714_FG_REG_SRAM_RADDR, SM5714_FG_ADDR_SRAM_OCV);
+-		value = i2c_smbus_read_word_data(drv->i2c, SM5714_FG_REG_SRAM_RDATA);
+-		if (value < 0)
+-			return value;
+-		// Convert to uV
+-		value &= 0x7ff;
+-		value = FIXED_POINT_8_8_EXTEND_TO_INT((unsigned short)value, 1000000);
+-		val->intval = value;
++		ret = sm5714_fg_vbat(drv, SM5714_FG_ADDR_SRAM_VBAT, &val->intval);
++		break;
++	case POWER_SUPPLY_PROP_VOLTAGE_AVG:
++		ret = sm5714_fg_vbat(drv, SM5714_FG_ADDR_SRAM_VBAT_AVG, &val->intval);
++		break;
++	case POWER_SUPPLY_PROP_VOLTAGE_OCV:
++		ret = sm5714_fg_ocv(drv, &val->intval);
+ 		break;
+ 	case POWER_SUPPLY_PROP_CURRENT_NOW:
+-		i2c_smbus_write_word_data(drv->i2c, SM5714_FG_REG_SRAM_RADDR, SM5714_FG_ADDR_SRAM_CURRENT);
+-		value = i2c_smbus_read_word_data(drv->i2c, SM5714_FG_REG_SRAM_RDATA);
+-		if (value < 0)
+-			return value;
+-		// Convert to mA
+-		value &= 0x7ff;
+-		value = FIXED_POINT_8_8_EXTEND_TO_INT((unsigned short)value, 1000);
+-		val->intval = value;
++		ret = sm5714_fg_current(drv, SM5714_FG_ADDR_SRAM_CURRENT, &val->intval);
++		break;
++	case POWER_SUPPLY_PROP_CURRENT_AVG:
++		ret = sm5714_fg_current(drv, SM5714_FG_ADDR_SRAM_CURRENT_AVG, &val->intval);
++		break;
++	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
++	case POWER_SUPPLY_PROP_CHARGE_FULL:
++		/* No learned capacity is exposed by the gauge */
++		val->intval = drv->charge_full_design_uah;
++		break;
++	case POWER_SUPPLY_PROP_CHARGE_NOW:
++		ret = sm5714_fg_soc_permille(drv, &tmp);
++		val->intval = (int)div_u64((u64)drv->charge_full_design_uah * tmp, 1000);
++		break;
++	case POWER_SUPPLY_PROP_ENERGY_FULL_DESIGN:
++	case POWER_SUPPLY_PROP_ENERGY_FULL:
++		val->intval = drv->energy_full_design_uwh;
++		break;
++	case POWER_SUPPLY_PROP_ENERGY_NOW:
++		ret = sm5714_fg_soc_permille(drv, &tmp);
++		val->intval = (int)div_u64((u64)drv->energy_full_design_uwh * tmp, 1000);
++		break;
++	case POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN:
++		val->intval = drv->voltage_min_design_uv;
++		break;
++	case POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN:
++		val->intval = drv->voltage_max_design_uv;
+ 		break;
+ 	default:
+ 		return -EINVAL;
+ 	}
+-	return 0;
++
++	return ret;
+ }
+ 
+ static const struct power_supply_desc sm5714_fg_desc = {
+@@ -141,36 +268,68 @@ static const struct power_supply_desc sm5714_fg_desc = {
+ 	.get_property		= sm5714_fg_get_property,
+ };
+ 
+-static int sm5714_fg_probe(struct i2c_client *i2c)
++static void sm5714_fg_get_battery_info(struct sm5714_fg *drv)
+ {
+-	struct sm5714_fg *drv;
++	struct power_supply_battery_info *info;
+ 
+-	struct power_supply *psy;
++	drv->charge_full_design_uah = SM5714_FG_DEFAULT_CHARGE_FULL_UAH;
++	drv->voltage_min_design_uv = 3400000;
++	drv->voltage_max_design_uv = 4400000;
++	drv->energy_full_design_uwh = 0;
++
++	if (!power_supply_get_battery_info(drv->psy, &info)) {
++		if (info->charge_full_design_uah > 0)
++			drv->charge_full_design_uah = info->charge_full_design_uah;
++		if (info->energy_full_design_uwh > 0)
++			drv->energy_full_design_uwh = info->energy_full_design_uwh;
++		if (info->voltage_min_design_uv > 0)
++			drv->voltage_min_design_uv = info->voltage_min_design_uv;
++		if (info->voltage_max_design_uv > 0)
++			drv->voltage_max_design_uv = info->voltage_max_design_uv;
++		power_supply_put_battery_info(drv->psy, info);
++	}
++
++	/* Fall back to 3.86 V nominal */
++	if (!drv->energy_full_design_uwh)
++		drv->energy_full_design_uwh =
++			(int)div_u64((u64)drv->charge_full_design_uah * 386, 100);
++}
++
++static int sm5714_fg_probe(struct i2c_client *i2c)
++{
+ 	struct power_supply_config fg_cfg = { };
++	struct sm5714_fg *drv;
++	int uv, ua, soc;
+ 
+ 	drv = devm_kzalloc(&i2c->dev, sizeof(*drv), GFP_KERNEL);
+ 	if (!drv)
+ 		return -ENOMEM;
+ 	drv->i2c = i2c;
++	mutex_init(&drv->lock);
++	i2c_set_clientdata(i2c, drv);
+ 
+ 	fg_cfg.drv_data = drv;
+-	fg_cfg.of_node = i2c->dev.of_node;
++	fg_cfg.fwnode = dev_fwnode(&i2c->dev);
+ 
+-	psy = devm_power_supply_register(&i2c->dev, &sm5714_fg_desc,
+-							&fg_cfg);
++	drv->psy = devm_power_supply_register(&i2c->dev, &sm5714_fg_desc, &fg_cfg);
++	if (IS_ERR(drv->psy))
++		return dev_err_probe(&i2c->dev, PTR_ERR(drv->psy),
++				     "failed to register power supply\n");
+ 
+-	if (IS_ERR(psy)) {
+-		dev_err(&i2c->dev, "failed to register power supply\n");
+-		return PTR_ERR(psy);
+-	}
++	sm5714_fg_get_battery_info(drv);
++
++	if (!sm5714_fg_vbat(drv, SM5714_FG_ADDR_SRAM_VBAT, &uv) &&
++	    !sm5714_fg_current(drv, SM5714_FG_ADDR_SRAM_CURRENT, &ua) &&
++	    !sm5714_fg_soc_permille(drv, &soc))
++		dev_info(&i2c->dev, "%d uV, %d uA, %d.%d %%, design %d uAh\n",
++			 uv, ua, soc / 10, soc % 10, drv->charge_full_design_uah);
+ 
+-	drv->psy = psy;
+ 	return 0;
+ }
+ 
+ static const struct i2c_device_id sm5714_i2c_ids[] = {
+-	{ "sm5714-fg", 0 },
+-	{ },
++	{ "sm5714-fg" },
++	{ }
+ };
+ MODULE_DEVICE_TABLE(i2c, sm5714_i2c_ids);
+ 
+@@ -186,11 +345,10 @@ static struct i2c_driver sm5714_fg_driver = {
+ 		.of_match_table = sm5714_of_match_table,
+ 	},
+ 	.probe	= sm5714_fg_probe,
+-	.id_table   = sm5714_i2c_ids,
++	.id_table = sm5714_i2c_ids,
+ };
+-
+ module_i2c_driver(sm5714_fg_driver);
+ 
+-MODULE_DESCRIPTION("Samsung SM5714-FG");
++MODULE_DESCRIPTION("Silicon Mitus SM5714 fuel gauge");
+ MODULE_AUTHOR("map220v <map220v300@gmail.com>");
+ MODULE_LICENSE("GPL");
+-- 
+2.53.0
+

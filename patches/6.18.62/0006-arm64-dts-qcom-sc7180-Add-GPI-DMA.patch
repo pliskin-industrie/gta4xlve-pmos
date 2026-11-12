@@ -1,0 +1,280 @@
+From 75667c9adff4cd8d4cd59c26fc9332e70c10cd6d Mon Sep 17 00:00:00 2001
+From: Vitalii Skorkin <nikroksm@mail.ru>
+Date: Sat, 22 Feb 2025 22:02:37 +0500
+Subject: [PATCH 06/25] arm64: dts: qcom: sc7180: Add GPI DMA
+
+Signed-off-by: Vitalii Skorkin <nikroksm@mail.ru>
+(cherry picked from commit 8abe36fdffbc423dd949b8c74a141238209bcdf2)
+---
+ arch/arm64/boot/dts/qcom/sc7180.dtsi | 101 +++++++++++++++++++++++++++
+ 1 file changed, 101 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc7180.dtsi b/arch/arm64/boot/dts/qcom/sc7180.dtsi
+index d9b37a31bc..fb7833c178 100644
+--- a/arch/arm64/boot/dts/qcom/sc7180.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc7180.dtsi
+@@ -12,6 +12,7 @@
+ #include <dt-bindings/clock/qcom,lpasscorecc-sc7180.h>
+ #include <dt-bindings/clock/qcom,rpmh.h>
+ #include <dt-bindings/clock/qcom,videocc-sc7180.h>
++#include <dt-bindings/dma/qcom-gpi.h>
+ #include <dt-bindings/firmware/qcom,scm.h>
+ #include <dt-bindings/interconnect/qcom,icc.h>
+ #include <dt-bindings/interconnect/qcom,osm-l3.h>
+@@ -877,6 +878,26 @@ opp-384000000 {
+ 			};
+ 		};
+ 
++		gpi_dma0: dma-controller@800000  {
++			compatible = "qcom,sm6350-gpi-dma";
++			reg = <0 0x00800000 0 0x60000>;
++			interrupts = <GIC_SPI 244 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 245 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 246 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 247 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 248 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 249 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 250 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 251 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 252 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 253 IRQ_TYPE_LEVEL_HIGH>;
++			dma-channels = <10>;
++			dma-channel-mask = <0x1f>;
++			iommus = <&apps_smmu 0x56 0x0>;
++			#dma-cells = <3>;
++			status = "disabled";
++		};
++
+ 		qupv3_id_0: geniqup@8c0000 {
+ 			compatible = "qcom,geni-se-qup";
+ 			reg = <0 0x008c0000 0 0x6000>;
+@@ -904,6 +925,9 @@ i2c0: i2c@880000 {
+ 						<&aggre1_noc MASTER_QUP_0 0 &mc_virt SLAVE_EBI1 0>;
+ 				interconnect-names = "qup-core", "qup-config",
+ 							"qup-memory";
++				dmas = <&gpi_dma0 0 0 QCOM_GPI_I2C>,
++				       <&gpi_dma0 1 0 QCOM_GPI_I2C>;
++				dma-names = "tx", "rx";
+ 				power-domains = <&rpmhpd SC7180_CX>;
+ 				required-opps = <&rpmhpd_opp_low_svs>;
+ 				status = "disabled";
+@@ -924,6 +948,9 @@ spi0: spi@880000 {
+ 				interconnects = <&qup_virt MASTER_QUP_CORE_0 0 &qup_virt SLAVE_QUP_CORE_0 0>,
+ 						<&gem_noc MASTER_APPSS_PROC 0 &config_noc SLAVE_QUP_0 0>;
+ 				interconnect-names = "qup-core", "qup-config";
++				dmas = <&gpi_dma0 0 0 QCOM_GPI_SPI>,
++				       <&gpi_dma0 1 0 QCOM_GPI_SPI>;
++				dma-names = "tx", "rx";
+ 				status = "disabled";
+ 			};
+ 
+@@ -958,6 +985,9 @@ i2c1: i2c@884000 {
+ 						<&aggre1_noc MASTER_QUP_0 0 &mc_virt SLAVE_EBI1 0>;
+ 				interconnect-names = "qup-core", "qup-config",
+ 							"qup-memory";
++				dmas = <&gpi_dma0 0 1 QCOM_GPI_I2C>,
++				       <&gpi_dma0 1 1 QCOM_GPI_I2C>;
++				dma-names = "tx", "rx";
+ 				power-domains = <&rpmhpd SC7180_CX>;
+ 				required-opps = <&rpmhpd_opp_low_svs>;
+ 				status = "disabled";
+@@ -978,6 +1008,9 @@ spi1: spi@884000 {
+ 				interconnects = <&qup_virt MASTER_QUP_CORE_0 0 &qup_virt SLAVE_QUP_CORE_0 0>,
+ 						<&gem_noc MASTER_APPSS_PROC 0 &config_noc SLAVE_QUP_0 0>;
+ 				interconnect-names = "qup-core", "qup-config";
++				dmas = <&gpi_dma0 0 1 QCOM_GPI_SPI>,
++				       <&gpi_dma0 1 1 QCOM_GPI_SPI>;
++				dma-names = "tx", "rx";
+ 				status = "disabled";
+ 			};
+ 
+@@ -1012,6 +1045,9 @@ i2c2: i2c@888000 {
+ 						<&aggre1_noc MASTER_QUP_0 0 &mc_virt SLAVE_EBI1 0>;
+ 				interconnect-names = "qup-core", "qup-config",
+ 							"qup-memory";
++				dmas = <&gpi_dma0 0 2 QCOM_GPI_I2C>,
++				       <&gpi_dma0 1 2 QCOM_GPI_I2C>;
++				dma-names = "tx", "rx";
+ 				power-domains = <&rpmhpd SC7180_CX>;
+ 				required-opps = <&rpmhpd_opp_low_svs>;
+ 				status = "disabled";
+@@ -1048,6 +1084,9 @@ i2c3: i2c@88c000 {
+ 						<&aggre1_noc MASTER_QUP_0 0 &mc_virt SLAVE_EBI1 0>;
+ 				interconnect-names = "qup-core", "qup-config",
+ 							"qup-memory";
++				dmas = <&gpi_dma0 0 3 QCOM_GPI_I2C>,
++				       <&gpi_dma0 1 3 QCOM_GPI_I2C>;
++				dma-names = "tx", "rx";
+ 				power-domains = <&rpmhpd SC7180_CX>;
+ 				required-opps = <&rpmhpd_opp_low_svs>;
+ 				status = "disabled";
+@@ -1068,6 +1107,9 @@ spi3: spi@88c000 {
+ 				interconnects = <&qup_virt MASTER_QUP_CORE_0 0 &qup_virt SLAVE_QUP_CORE_0 0>,
+ 						<&gem_noc MASTER_APPSS_PROC 0 &config_noc SLAVE_QUP_0 0>;
+ 				interconnect-names = "qup-core", "qup-config";
++				dmas = <&gpi_dma0 0 3 QCOM_GPI_SPI>,
++				       <&gpi_dma0 1 3 QCOM_GPI_SPI>;
++				dma-names = "tx", "rx";
+ 				status = "disabled";
+ 			};
+ 
+@@ -1102,6 +1144,9 @@ i2c4: i2c@890000 {
+ 						<&aggre1_noc MASTER_QUP_0 0 &mc_virt SLAVE_EBI1 0>;
+ 				interconnect-names = "qup-core", "qup-config",
+ 							"qup-memory";
++				dmas = <&gpi_dma0 0 4 QCOM_GPI_I2C>,
++				       <&gpi_dma0 1 4 QCOM_GPI_I2C>;
++				dma-names = "tx", "rx";
+ 				power-domains = <&rpmhpd SC7180_CX>;
+ 				required-opps = <&rpmhpd_opp_low_svs>;
+ 				status = "disabled";
+@@ -1138,6 +1183,9 @@ i2c5: i2c@894000 {
+ 						<&aggre1_noc MASTER_QUP_0 0 &mc_virt SLAVE_EBI1 0>;
+ 				interconnect-names = "qup-core", "qup-config",
+ 							"qup-memory";
++				dmas = <&gpi_dma0 0 5 QCOM_GPI_I2C>,
++				       <&gpi_dma0 1 5 QCOM_GPI_I2C>;
++				dma-names = "tx", "rx";
+ 				power-domains = <&rpmhpd SC7180_CX>;
+ 				required-opps = <&rpmhpd_opp_low_svs>;
+ 				status = "disabled";
+@@ -1158,6 +1206,9 @@ spi5: spi@894000 {
+ 				interconnects = <&qup_virt MASTER_QUP_CORE_0 0 &qup_virt SLAVE_QUP_CORE_0 0>,
+ 						<&gem_noc MASTER_APPSS_PROC 0 &config_noc SLAVE_QUP_0 0>;
+ 				interconnect-names = "qup-core", "qup-config";
++				dmas = <&gpi_dma0 0 5 QCOM_GPI_SPI>,
++				       <&gpi_dma0 1 5 QCOM_GPI_SPI>;
++				dma-names = "tx", "rx";
+ 				status = "disabled";
+ 			};
+ 
+@@ -1178,6 +1229,26 @@ uart5: serial@894000 {
+ 			};
+ 		};
+ 
++		gpi_dma1: dma-controller@a00000 {
++			compatible = "qcom,sm6350-gpi-dma";
++			reg = <0 0x00a00000 0 0x60000>;
++			interrupts = <GIC_SPI 645 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 646 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 647 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 648 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 649 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 650 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 651 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 652 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 653 IRQ_TYPE_LEVEL_HIGH>,
++						<GIC_SPI 654 IRQ_TYPE_LEVEL_HIGH>;
++			dma-channels = <10>;
++			dma-channel-mask = <0x3f>;
++			iommus = <&apps_smmu 0x4d6 0x0>;
++			#dma-cells = <3>;
++			status = "disabled";
++		};
++
+ 		qupv3_id_1: geniqup@ac0000 {
+ 			compatible = "qcom,geni-se-qup";
+ 			reg = <0 0x00ac0000 0 0x6000>;
+@@ -1205,6 +1276,9 @@ i2c6: i2c@a80000 {
+ 						<&aggre2_noc MASTER_QUP_1 0 &mc_virt SLAVE_EBI1 0>;
+ 				interconnect-names = "qup-core", "qup-config",
+ 							"qup-memory";
++				dmas = <&gpi_dma1 0 0 QCOM_GPI_I2C>,
++				       <&gpi_dma1 1 0 QCOM_GPI_I2C>;
++				dma-names = "tx", "rx";
+ 				power-domains = <&rpmhpd SC7180_CX>;
+ 				required-opps = <&rpmhpd_opp_low_svs>;
+ 				status = "disabled";
+@@ -1225,6 +1299,9 @@ spi6: spi@a80000 {
+ 				interconnects = <&qup_virt MASTER_QUP_CORE_1 0 &qup_virt SLAVE_QUP_CORE_1 0>,
+ 						<&gem_noc MASTER_APPSS_PROC 0 &config_noc SLAVE_QUP_1 0>;
+ 				interconnect-names = "qup-core", "qup-config";
++				dmas = <&gpi_dma1 0 0 QCOM_GPI_SPI>,
++				       <&gpi_dma1 1 0 QCOM_GPI_SPI>;
++				dma-names = "tx", "rx";
+ 				status = "disabled";
+ 			};
+ 
+@@ -1259,6 +1336,9 @@ i2c7: i2c@a84000 {
+ 						<&aggre2_noc MASTER_QUP_1 0 &mc_virt SLAVE_EBI1 0>;
+ 				interconnect-names = "qup-core", "qup-config",
+ 							"qup-memory";
++				dmas = <&gpi_dma1 0 1 QCOM_GPI_I2C>,
++				       <&gpi_dma1 1 1 QCOM_GPI_I2C>;
++				dma-names = "tx", "rx";
+ 				power-domains = <&rpmhpd SC7180_CX>;
+ 				required-opps = <&rpmhpd_opp_low_svs>;
+ 				status = "disabled";
+@@ -1295,6 +1375,9 @@ i2c8: i2c@a88000 {
+ 						<&aggre2_noc MASTER_QUP_1 0 &mc_virt SLAVE_EBI1 0>;
+ 				interconnect-names = "qup-core", "qup-config",
+ 							"qup-memory";
++				dmas = <&gpi_dma1 0 2 QCOM_GPI_I2C>,
++				       <&gpi_dma1 1 2 QCOM_GPI_I2C>;
++				dma-names = "tx", "rx";
+ 				power-domains = <&rpmhpd SC7180_CX>;
+ 				required-opps = <&rpmhpd_opp_low_svs>;
+ 				status = "disabled";
+@@ -1315,6 +1398,9 @@ spi8: spi@a88000 {
+ 				interconnects = <&qup_virt MASTER_QUP_CORE_1 0 &qup_virt SLAVE_QUP_CORE_1 0>,
+ 						<&gem_noc MASTER_APPSS_PROC 0 &config_noc SLAVE_QUP_1 0>;
+ 				interconnect-names = "qup-core", "qup-config";
++				dmas = <&gpi_dma1 0 2 QCOM_GPI_SPI>,
++				       <&gpi_dma1 1 2 QCOM_GPI_SPI>;
++				dma-names = "tx", "rx";
+ 				status = "disabled";
+ 			};
+ 
+@@ -1349,6 +1435,9 @@ i2c9: i2c@a8c000 {
+ 						<&aggre2_noc MASTER_QUP_1 0 &mc_virt SLAVE_EBI1 0>;
+ 				interconnect-names = "qup-core", "qup-config",
+ 							"qup-memory";
++				dmas = <&gpi_dma1 0 3 QCOM_GPI_I2C>,
++				       <&gpi_dma1 1 3 QCOM_GPI_I2C>;
++				dma-names = "tx", "rx";
+ 				power-domains = <&rpmhpd SC7180_CX>;
+ 				required-opps = <&rpmhpd_opp_low_svs>;
+ 				status = "disabled";
+@@ -1385,6 +1474,9 @@ i2c10: i2c@a90000 {
+ 						<&aggre2_noc MASTER_QUP_1 0 &mc_virt SLAVE_EBI1 0>;
+ 				interconnect-names = "qup-core", "qup-config",
+ 							"qup-memory";
++				dmas = <&gpi_dma1 0 4 QCOM_GPI_I2C>,
++				       <&gpi_dma1 1 4 QCOM_GPI_I2C>;
++				dma-names = "tx", "rx";
+ 				power-domains = <&rpmhpd SC7180_CX>;
+ 				required-opps = <&rpmhpd_opp_low_svs>;
+ 				status = "disabled";
+@@ -1405,6 +1497,9 @@ spi10: spi@a90000 {
+ 				interconnects = <&qup_virt MASTER_QUP_CORE_1 0 &qup_virt SLAVE_QUP_CORE_1 0>,
+ 						<&gem_noc MASTER_APPSS_PROC 0 &config_noc SLAVE_QUP_1 0>;
+ 				interconnect-names = "qup-core", "qup-config";
++				dmas = <&gpi_dma1 0 4 QCOM_GPI_SPI>,
++				       <&gpi_dma1 1 4 QCOM_GPI_SPI>;
++				dma-names = "tx", "rx";
+ 				status = "disabled";
+ 			};
+ 
+@@ -1439,6 +1534,9 @@ i2c11: i2c@a94000 {
+ 						<&aggre2_noc MASTER_QUP_1 0 &mc_virt SLAVE_EBI1 0>;
+ 				interconnect-names = "qup-core", "qup-config",
+ 							"qup-memory";
++				dmas = <&gpi_dma1 0 5 QCOM_GPI_I2C>,
++				       <&gpi_dma1 1 5 QCOM_GPI_I2C>;
++				dma-names = "tx", "rx";
+ 				power-domains = <&rpmhpd SC7180_CX>;
+ 				required-opps = <&rpmhpd_opp_low_svs>;
+ 				status = "disabled";
+@@ -1459,6 +1557,9 @@ spi11: spi@a94000 {
+ 				interconnects = <&qup_virt MASTER_QUP_CORE_1 0 &qup_virt SLAVE_QUP_CORE_1 0>,
+ 						<&gem_noc MASTER_APPSS_PROC 0 &config_noc SLAVE_QUP_1 0>;
+ 				interconnect-names = "qup-core", "qup-config";
++				dmas = <&gpi_dma1 0 5 QCOM_GPI_SPI>,
++				       <&gpi_dma1 1 5 QCOM_GPI_SPI>;
++				dma-names = "tx", "rx";
+ 				status = "disabled";
+ 			};
+ 
+-- 
+2.53.0
+

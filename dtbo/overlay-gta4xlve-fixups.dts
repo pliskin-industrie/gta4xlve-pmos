@@ -1,0 +1,25 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	model = "Samsung Galaxy Tab S6 Lite (2022)";
+	compatible = "samsung,gta4xlve", "qcom,sm7125";
+	qcom,msm-id = <0x1bb 0x00>;
+	qcom,board-id = <0x22 0x00>;
+	dtbo-version = <0x00>;
+
+	fragment@0 {
+		target = <&reserved_memory>;
+		__overlay__ {
+			ramoops@b4600000 {
+				compatible = "ramoops";
+				reg = <0x00 0xb4600000 0x00 0x100000>;
+				record-size = <0x40000>;
+				console-size = <0x40000>;
+				ftrace-size = <0x40000>;
+				pmsg-size = <0x40000>;
+				no-map;
+			};
+		};
+	};
+};

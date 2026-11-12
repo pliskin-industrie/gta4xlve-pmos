@@ -1,0 +1,78 @@
+From 64207e73024b267367f6043ccc923d381aa9e9fb Mon Sep 17 00:00:00 2001
+From: Vitalii Skorkin <nikroks@mainlining.org>
+Date: Fri, 2 May 2025 18:10:06 +0500
+Subject: [PATCH 02/25] arm64: dts: qcom: sc7180: Add 0x9f Adreno speed bin
+
+Signed-off-by: Vitalii Skorkin <nikroks@mainlining.org>
+(cherry picked from commit c6779e731af9ec75dd522e0fb70dd7a02c46a8b1)
+---
+ arch/arm64/boot/dts/qcom/sc7180.dtsi | 19 +++++++++++++------
+ 1 file changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc7180.dtsi b/arch/arm64/boot/dts/qcom/sc7180.dtsi
+index dc96d3d5e9..636fd4a47e 100644
+--- a/arch/arm64/boot/dts/qcom/sc7180.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc7180.dtsi
+@@ -2200,46 +2200,53 @@ opp-800000000 {
+ 					opp-supported-hw = <0x07>;
+ 				};
+ 
++				opp-750000000 {
++					opp-hz = /bits/ 64 <750000000>;
++					opp-level = <RPMH_REGULATOR_LEVEL_NOM_L1>;
++					opp-peak-kBps = <7216000>;
++					opp-supported-hw = <0x08>;
++				};
++
+ 				opp-650000000 {
+ 					opp-hz = /bits/ 64 <650000000>;
+ 					opp-level = <RPMH_REGULATOR_LEVEL_NOM_L1>;
+ 					opp-peak-kBps = <7216000>;
+-					opp-supported-hw = <0x07>;
++					opp-supported-hw = <0x0f>;
+ 				};
+ 
+ 				opp-565000000 {
+ 					opp-hz = /bits/ 64 <565000000>;
+ 					opp-level = <RPMH_REGULATOR_LEVEL_NOM>;
+ 					opp-peak-kBps = <5412000>;
+-					opp-supported-hw = <0x07>;
++					opp-supported-hw = <0x0f>;
+ 				};
+ 
+ 				opp-430000000 {
+ 					opp-hz = /bits/ 64 <430000000>;
+ 					opp-level = <RPMH_REGULATOR_LEVEL_SVS_L1>;
+ 					opp-peak-kBps = <5412000>;
+-					opp-supported-hw = <0x07>;
++					opp-supported-hw = <0x0f>;
+ 				};
+ 
+ 				opp-355000000 {
+ 					opp-hz = /bits/ 64 <355000000>;
+ 					opp-level = <RPMH_REGULATOR_LEVEL_SVS>;
+ 					opp-peak-kBps = <3072000>;
+-					opp-supported-hw = <0x07>;
++					opp-supported-hw = <0x0f>;
+ 				};
+ 
+ 				opp-267000000 {
+ 					opp-hz = /bits/ 64 <267000000>;
+ 					opp-level = <RPMH_REGULATOR_LEVEL_LOW_SVS>;
+ 					opp-peak-kBps = <3072000>;
+-					opp-supported-hw = <0x07>;
++					opp-supported-hw = <0x0f>;
+ 				};
+ 
+ 				opp-180000000 {
+ 					opp-hz = /bits/ 64 <180000000>;
+ 					opp-level = <RPMH_REGULATOR_LEVEL_MIN_SVS>;
+ 					opp-peak-kBps = <1804000>;
+-					opp-supported-hw = <0x07>;
++					opp-supported-hw = <0x0f>;
+ 				};
+ 			};
+ 		};
+-- 
+2.53.0
+

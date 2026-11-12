@@ -1,0 +1,26 @@
+From f6ec59583f4e9ac6b147cd00045f11f376baeda3 Mon Sep 17 00:00:00 2001
+From: Vitalii Skorkin <nikroksm@mail.ru>
+Date: Sat, 22 Feb 2025 22:06:17 +0500
+Subject: [PATCH 07/25] arm64: dts: qcom: sc7180: Mark ADSP as non-secure
+
+Signed-off-by: Vitalii Skorkin <nikroksm@mail.ru>
+(cherry picked from commit 2b8fad9ac2c3c6ae9ac399f7e0e1e375bae9576a)
+---
+ arch/arm64/boot/dts/qcom/sc7180.dtsi | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/sc7180.dtsi b/arch/arm64/boot/dts/qcom/sc7180.dtsi
+index fb7833c178..1e3e95f7c5 100644
+--- a/arch/arm64/boot/dts/qcom/sc7180.dtsi
++++ b/arch/arm64/boot/dts/qcom/sc7180.dtsi
+@@ -4197,6 +4197,7 @@ fastrpc {
+ 					compatible = "qcom,fastrpc";
+ 					qcom,glink-channels = "fastrpcglink-apps-dsp";
+ 					label = "adsp";
++					qcom,non-secure-domain;
+ 					#address-cells = <1>;
+ 					#size-cells = <0>;
+ 
+-- 
+2.53.0
+

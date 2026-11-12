@@ -1,0 +1,26 @@
+From 8693c27421e8afde9ef9b1b1a22207849d1c6fae Mon Sep 17 00:00:00 2001
+From: Vitalii Skorkin <nikroksm@mail.ru>
+Date: Sat, 7 Dec 2024 17:52:17 +0500
+Subject: [PATCH 12/25] firmware: qcom: tzmem: disable sm7125 platform
+
+Signed-off-by: Vitalii Skorkin <nikroksm@mail.ru>
+(cherry picked from commit e0ea9bb182f066fc4ddac995bef45865e8cc75a3)
+---
+ drivers/firmware/qcom/qcom_tzmem.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/firmware/qcom/qcom_tzmem.c b/drivers/firmware/qcom/qcom_tzmem.c
+index f926c1f648..371fbe0b29 100644
+--- a/drivers/firmware/qcom/qcom_tzmem.c
++++ b/drivers/firmware/qcom/qcom_tzmem.c
+@@ -83,6 +83,7 @@ static const char *const qcom_tzmem_blacklist[] = {
+ 	"qcom,sdm670", /* failure in GPU firmware loading */
+ 	"qcom,sdm845", /* reset in rmtfs memory assignment */
+ 	"qcom,sm7150", /* reset in rmtfs memory assignment */
++	"qcom,sm7125",
+ 	"qcom,sm8150", /* reset in rmtfs memory assignment */
+ 	NULL
+ };
+-- 
+2.53.0
+

@@ -1,0 +1,26 @@
+From c3a3de7acf8f9759100ecec41da17e160b9ab149 Mon Sep 17 00:00:00 2001
+From: N1kroks <nikroksm@mail.ru>
+Date: Wed, 12 Jun 2024 11:30:13 +0500
+Subject: [PATCH 04/25] drm/msm/adreno: Add A618 hwcg
+
+Signed-off-by: Vitalii Skorkin <nikroksm@mail.ru>
+(cherry picked from commit 31a7f8d4c2736d310e88e40bbbf1632c3b018c12)
+---
+ drivers/gpu/drm/msm/adreno/a6xx_catalog.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/gpu/drm/msm/adreno/a6xx_catalog.c b/drivers/gpu/drm/msm/adreno/a6xx_catalog.c
+index 6b83cdbe35..b78c27987e 100644
+--- a/drivers/gpu/drm/msm/adreno/a6xx_catalog.c
++++ b/drivers/gpu/drm/msm/adreno/a6xx_catalog.c
+@@ -775,6 +775,7 @@ static const struct adreno_info a6xx_gpus[] = {
+ 		.init = a6xx_gpu_init,
+ 		.zapfw = "a615_zap.mbn",
+ 		.a6xx = &(const struct a6xx_info) {
++			.hwcg = a615_hwcg,
+ 			.protect = &a630_protect,
+ 			.gmu_cgc_mode = 0x00000222,
+ 			.prim_fifo_threshold = 0x00180000,
+-- 
+2.53.0
+
