@@ -14,7 +14,7 @@ declares it, rather than leaving the panel at whatever brightness the
 bootloader happened to set.
 
 Signed-off-by: Viktor Zaritskyi <viktorzarickiy@gmail.com>
-Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Assisted-by: Claude:claude-opus-5
 (cherry picked from commit 8794e74dae8615545eba9fd0faedc84a8f82f5a2)
 ---
  drivers/gpu/drm/panel/panel-himax-hx83102.c | 151 +++++++++++++++++++-

@@ -11,7 +11,7 @@ MI2S -- gets a port with no bit clock at all: the DSP plays happily, the PCM
 reports RUNNING and the codec's DAPM widgets all come up, so nothing looks
 wrong, but no data ever reaches the codec and the speakers stay silent.
 
-Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
+Assisted-by: Claude:claude-opus-5
 (cherry picked from commit a381ae8bf9558d9bfc023a8d568cf82ec5d5ef15)
 ---
  sound/soc/qcom/sm8250.c | 8 ++++++++

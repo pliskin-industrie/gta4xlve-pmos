@@ -21,6 +21,7 @@ back to 7040 mAh).
 Scaling taken from the Samsung SM7125 vendor kernel
 (drivers/battery/fuelgauge/sm5714_fuelgauge.c, GPL-2.0).
 
+Assisted-by: Claude:claude-opus-5
 Signed-off-by: Pliskin Industrie <pliskin-industrie@users.noreply.github.com>
 (cherry picked from commit 52d9995d6c65d63ce90f4b70c5a4453fd8ab03b0)
 ---

@@ -11,6 +11,7 @@ HS disconnect trim 3, impedance offset 0x08, bias control 0x16).
 
 Values were read from the vendor device tree of the stock firmware.
 
+Assisted-by: Claude:claude-opus-5
 Signed-off-by: Pliskin Industrie <pliskin-industrie@users.noreply.github.com>
 ---
  .../boot/dts/qcom/sm7125-samsung-gta4xlve.dts   | 17 +++++++++++++++++

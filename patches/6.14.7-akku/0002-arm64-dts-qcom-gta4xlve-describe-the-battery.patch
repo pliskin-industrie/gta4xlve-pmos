@@ -7,6 +7,7 @@ Add a simple-battery node for the 7040 mAh / 3.86 V cell and link it to
 the SM5714 fuel gauge, so that userspace (upower) gets design capacity
 and can estimate remaining time.
 
+Assisted-by: Claude:claude-opus-5
 Signed-off-by: Pliskin Industrie <pliskin-industrie@users.noreply.github.com>
 ---
  .../boot/dts/qcom/sm7125-samsung-gta4xlve.dts    | 16 ++++++++++++++++
