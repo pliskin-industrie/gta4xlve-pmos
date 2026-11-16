@@ -67,8 +67,12 @@ The modem remoteproc crashes at boot on 7.3.3. The Wi-Fi tablet has no modem, so
 | `docs/abl-dtbo.md` | the Samsung ABL overlay trap (the most useful thing I found) |
 | `docs/hacks.md` | workarounds: speaker amplifier after boot, UCM link, USB LPM, games notes |
 
-**Not here (yet):** `pmaports` packages (`device-samsung-gta4xlve`, `linux-samsung-gta4xlve`). I have not written or tested
-APKBUILDs, so I do not pretend to ship them. The device-specific setup is done by hand as described in the docs.
+**Not here:** `pmaports` packages (`device-samsung-gta4xlve`, `linux-samsung-gta4xlve`). The device-specific setup is done by hand as described in the docs.
+
+**This port stays here on GitHub.** The patches were made with the help of an AI coding assistant (marked with `Assisted-by:` tags,
+as the [kernel docs](https://docs.kernel.org/process/coding-assistants.html) require). postmarketOS / Nura does not accept contributions
+created with generative AI ([AI policy](https://docs.postmarketos.org/policies-and-processes/development/ai-policy.html)), so there will be
+no pmaports merge request and no wiki page from me. Anyone who wants to bring gta4xlve support there is welcome to use what is here as reference.
 **Never included:** firmware blobs, stock Samsung images, root filesystem images, backups.
 
 There is **no prebuilt boot image yet.** Build `boot.img` yourself with `tools/mkboot.py`: it takes a known-good `boot.img` from your own device as a template
